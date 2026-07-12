@@ -144,7 +144,7 @@
                     @for (int j = 0; j < row.Results.Count; j++)
                     {
                         var res = row.Results[j];
-                        <div class="card-result">
+                        <div class="card-result" @key="res">
                             @if (row.Results.Count > 1)
                             {
                                 <span class="roll-idx">@(j + 1).</span>
