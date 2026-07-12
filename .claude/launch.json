@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "diceroller",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "DiceRoller", "--launch-profile", "http"],
+      "port": 5241
+    }
+  ]
+}

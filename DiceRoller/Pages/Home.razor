@@ -1,0 +1,326 @@
+@page "/"
+@using DiceRoller.Models
+@using DiceRoller.Services
+@inject DiceService Dice
+@inject PresetService Presets
+
+<PageTitle>D&D Dice Roller</PageTitle>
+
+<header class="app-header">
+    <h1>⚔️ D&amp;D Attack Roller</h1>
+    <p class="subtitle">Crypto-grade randomness · advantage / disadvantage · crits doubled</p>
+</header>
+
+<div class="toolbar">
+    <button class="btn btn-add" @onclick="AddRow">+ Add attack</button>
+    <button class="btn btn-roll-all" @onclick="RollAll" disabled="@(!_rows.Any())">🎲 Roll all (@TotalAttackCount)</button>
+    <button class="btn btn-clear" @onclick="ClearResults" disabled="@(!_rows.Any(r => r.Results.Count > 0))">Clear results</button>
+    <label class="crit-field" title="Default: crit rolls all damage dice twice. Perkins: crit deals normal roll + maximized dice.">
+        Crit rule
+        <select @bind="_critRule">
+            <option value="@CritRule.Default">Default (2× dice)</option>
+            <option value="@CritRule.Perkins">Perkins (max + roll)</option>
+        </select>
+    </label>
+    <label class="ac-field">
+        Target AC
+        <input type="number" placeholder="—" @bind="_targetAc" />
+    </label>
+</div>
+
+<div class="preset-bar">
+    <span class="preset-label">📁 Presets</span>
+    <select @bind="_selectedPreset">
+        <option value="">— select —</option>
+        @foreach (var name in _presets.Keys.OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+        {
+            <option value="@name">@name</option>
+        }
+    </select>
+    <button class="btn btn-small" @onclick="LoadPreset" disabled="@(string.IsNullOrEmpty(_selectedPreset))">Load</button>
+    <button class="btn btn-small btn-remove" @onclick="DeletePreset" disabled="@(string.IsNullOrEmpty(_selectedPreset))">Delete</button>
+    <span class="preset-save">
+        <input type="text" class="preset-name-input" placeholder="preset name…" @bind="_newPresetName" />
+        <button class="btn btn-small" @onclick="SavePreset"
+                disabled="@(!_rows.Any() || string.IsNullOrWhiteSpace(_newPresetName))"
+                title="Save all current attacks under this name (overwrites an existing preset with the same name)">
+            💾 Save current
+        </button>
+    </span>
+</div>
+
+@if (_rows.Any(r => r.Results.Count > 0))
+{
+    <div class="summary">
+        @if (_targetAc is int ac)
+        {
+            <span><strong>@HitCount</strong> of @RolledCount hit AC @ac</span>
+            <span class="summary-dmg">Total damage (hits): <strong>@TotalHitDamage</strong></span>
+        }
+        else
+        {
+            <span>@RolledCount rolled</span>
+            <span class="summary-dmg">Total damage (all): <strong>@TotalDamage</strong></span>
+        }
+    </div>
+}
+
+<div class="rows">
+    @for (int i = 0; i < _rows.Count; i++)
+    {
+        var row = _rows[i];
+        var idx = i;
+        <div class="attack-card @ResultClass(row)">
+            <div class="card-config">
+                <span class="row-num">#@(idx + 1)</span>
+                <input class="name-input" type="text" @bind="row.Name" />
+
+                <div class="mode-toggle">
+                    @foreach (var mode in Enum.GetValues<RollMode>())
+                    {
+                        <button class="mode-btn @(row.Mode == mode ? "active " + mode.ToString().ToLower() : "")"
+                                @onclick="() => row.Mode = mode">
+                            @ModeLabel(mode)
+                        </button>
+                    }
+                </div>
+
+                <label class="field">
+                    to hit
+                    <input type="number" class="num" @bind="row.AttackMod" />
+                </label>
+
+                <label class="field dmg-field">
+                    damage
+                    <input type="number" class="num narrow" min="1" @bind="row.DamageDiceCount" />
+                    <select @bind="row.DamageDieSize">
+                        @foreach (var d in _dieSizes)
+                        {
+                            <option value="@d">d@(d)</option>
+                        }
+                    </select>
+                    <span>+</span>
+                    <input type="number" class="num" @bind="row.DamageMod" />
+                </label>
+
+                <label class="field" title="How many times to roll this attack">
+                    ×
+                    <input type="number" class="num narrow" min="1" max="50" @bind="row.Count" />
+                </label>
+
+                <div class="card-actions">
+                    <button class="btn btn-small btn-roll" @onclick="() => RollOne(row)">🎲 Roll @(row.Count > 1 ? $"×{row.Count}" : "")</button>
+                    <button class="btn btn-small btn-remove" @onclick="() => _rows.RemoveAt(idx)" title="Remove">✕</button>
+                </div>
+            </div>
+
+            @if (row.Results.Count > 0)
+            {
+                <div class="result-log">
+                    @for (int j = 0; j < row.Results.Count; j++)
+                    {
+                        var res = row.Results[j];
+                        <div class="card-result">
+                            @if (row.Results.Count > 1)
+                            {
+                                <span class="roll-idx">@(j + 1).</span>
+                            }
+                            <span class="d20-group">
+                                <span class="die d20 @D20Class(row, res, res.D20First, isFirst: true)">@res.D20First</span>
+                                @if (res.D20Second is int d2)
+                                {
+                                    <span class="die d20 @D20Class(row, res, d2, isFirst: false)">@d2</span>
+                                }
+                            </span>
+                            <span class="attack-total">
+                                to hit: <strong>@res.AttackTotal</strong>
+                                @if (res.IsCrit)
+                                {
+                                    <span class="badge crit">CRIT!</span>
+                                }
+                                else if (res.IsFumble)
+                                {
+                                    <span class="badge fumble">NAT 1</span>
+                                }
+                                else if (_targetAc is int ac2)
+                                {
+                                    <span class="badge @(res.AttackTotal >= ac2 ? "hit" : "miss")">@(res.AttackTotal >= ac2 ? "HIT" : "MISS")</span>
+                                }
+                            </span>
+                            <span class="damage">
+                                dmg:
+                                @foreach (var d in res.DamageRolls)
+                                {
+                                    <span class="die small">@d</span>
+                                }
+                                @if (res.CritBonus > 0)
+                                {
+                                    <span class="crit-bonus" title="Perkins crit: maximized damage dice">+@res.CritBonus max</span>
+                                }
+                                @if (row.DamageMod != 0)
+                                {
+                                    <span class="dmg-mod">@(row.DamageMod > 0 ? "+" : "")@row.DamageMod</span>
+                                }
+                                = <strong class="dmg-total">@res.DamageTotal</strong>
+                            </span>
+                        </div>
+                    }
+                    @if (row.Results.Count > 1)
+                    {
+                        <div class="log-subtotal">
+                            @if (_targetAc is int ac3)
+                            {
+                                <span>@row.Results.Count(r => Hits(r, ac3)) of @row.Results.Count hit</span>
+                                <span>· damage (hits): <strong>@row.Results.Where(r => Hits(r, ac3)).Sum(r => r.DamageTotal)</strong></span>
+                            }
+                            else
+                            {
+                                <span>damage (all): <strong>@row.Results.Where(r => !r.IsFumble).Sum(r => r.DamageTotal)</strong></span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (!_rows.Any())
+{
+    <div class="empty-hint">
+        <p>No attacks yet. Add one and set the × count to roll it many times — e.g. for <em>Animate Objects</em>: tiny object, +8 to hit, 1d4+4 damage, ×10.</p>
+        <button class="btn btn-add" @onclick="AddAnimateObjectsPreset">Load Animate Objects preset (tiny ×10)</button>
+    </div>
+}
+
+@code {
+    private readonly List<AttackRow> _rows = [];
+    private readonly int[] _dieSizes = [4, 6, 8, 10, 12, 20, 100];
+    private int? _targetAc;
+    private CritRule _critRule = CritRule.Default;
+    private Dictionary<string, List<AttackRow>> _presets = [];
+    private string _selectedPreset = "";
+    private string _newPresetName = "";
+
+    protected override async Task OnInitializedAsync() => _presets = await Presets.LoadAllAsync();
+
+    private async Task SavePreset()
+    {
+        var name = _newPresetName.Trim();
+        if (name.Length == 0 || !_rows.Any())
+        {
+            return;
+        }
+        _presets[name] = PresetService.DeepCopy(_rows);
+        await Presets.SaveAllAsync(_presets);
+        _selectedPreset = name;
+        _newPresetName = "";
+    }
+
+    private void LoadPreset()
+    {
+        if (_presets.TryGetValue(_selectedPreset, out var rows))
+        {
+            _rows.Clear();
+            _rows.AddRange(PresetService.DeepCopy(rows));
+        }
+    }
+
+    private async Task DeletePreset()
+    {
+        if (_presets.Remove(_selectedPreset))
+        {
+            await Presets.SaveAllAsync(_presets);
+            _selectedPreset = "";
+        }
+    }
+
+    private IEnumerable<AttackResult> AllResults => _rows.SelectMany(r => r.Results);
+    private int TotalAttackCount => _rows.Sum(r => Math.Clamp(r.Count, 1, 50));
+    private int RolledCount => AllResults.Count();
+    private int TotalDamage => AllResults.Where(r => !r.IsFumble).Sum(r => r.DamageTotal);
+    private int HitCount => _targetAc is int ac ? AllResults.Count(r => Hits(r, ac)) : 0;
+    private int TotalHitDamage => _targetAc is int ac
+        ? AllResults.Where(r => Hits(r, ac)).Sum(r => r.DamageTotal)
+        : 0;
+
+    private static bool Hits(AttackResult res, int ac) => res.IsCrit || (!res.IsFumble && res.AttackTotal >= ac);
+
+    private void AddRow() => _rows.Add(new AttackRow());
+
+    private void AddAnimateObjectsPreset()
+    {
+        _rows.Add(new AttackRow
+        {
+            Name = "Tiny object",
+            AttackMod = 8,
+            DamageDiceCount = 1,
+            DamageDieSize = 4,
+            DamageMod = 4,
+            Count = 10,
+        });
+    }
+
+    private void RollOne(AttackRow row)
+    {
+        Sanitize(row);
+        row.Results.Clear();
+        for (int i = 0; i < row.Count; i++)
+        {
+            row.Results.Add(Dice.ResolveAttack(row, _critRule));
+        }
+    }
+
+    private void RollAll()
+    {
+        foreach (var row in _rows)
+        {
+            RollOne(row);
+        }
+    }
+
+    private void ClearResults()
+    {
+        foreach (var row in _rows)
+        {
+            row.Results.Clear();
+        }
+    }
+
+    private static void Sanitize(AttackRow row)
+    {
+        row.DamageDiceCount = Math.Clamp(row.DamageDiceCount, 1, 40);
+        row.Count = Math.Clamp(row.Count, 1, 50);
+        if (row.DamageDieSize is not (4 or 6 or 8 or 10 or 12 or 20 or 100))
+        {
+            row.DamageDieSize = 6;
+        }
+    }
+
+    private static string ModeLabel(RollMode mode) => mode switch
+    {
+        RollMode.Advantage => "ADV",
+        RollMode.Disadvantage => "DIS",
+        _ => "Normal",
+    };
+
+    // Highlights the die that was kept (for adv/dis) and colors nat 1 / nat 20.
+    private static string D20Class(AttackRow row, AttackResult res, int value, bool isFirst)
+    {
+        var classes = value switch { 20 => "nat20", 1 => "nat1", _ => "" };
+        if (row.Mode == RollMode.Normal)
+        {
+            return classes;
+        }
+        bool chosen = res.D20First == res.D20Second ? isFirst : value == res.NaturalRoll;
+        return chosen ? classes + " chosen" : classes + " dropped";
+    }
+
+    private static string ResultClass(AttackRow row) => row.Results switch
+    {
+        [] => "",
+        var results when results.Any(r => r.IsCrit) => "res-crit",
+        var results when results.All(r => r.IsFumble) => "res-fumble",
+        _ => "res-rolled",
+    };
+}

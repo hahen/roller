@@ -1,0 +1,498 @@
+:root {
+    --bg: #171321;
+    --bg-card: #221c31;
+    --bg-card-hover: #282138;
+    --bg-input: #14101f;
+    --border: #3a3050;
+    --text: #e8e2f4;
+    --text-dim: #9c92b8;
+    --accent: #a78bfa;
+    --accent-strong: #8b5cf6;
+    --gold: #fbbf24;
+    --green: #34d399;
+    --red: #f87171;
+    --crit: #f59e0b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.app-main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+}
+
+/* ---------- header ---------- */
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    letter-spacing: 0.02em;
+}
+
+.app-header .subtitle {
+    margin: 0.25rem 0 1.25rem;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.btn {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.btn:hover:not(:disabled) {
+    background: var(--bg-card-hover);
+    border-color: var(--accent);
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.btn-add {
+    border-color: var(--accent-strong);
+}
+
+.btn-roll-all {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+    font-weight: 600;
+}
+
+.btn-roll-all:hover:not(:disabled) {
+    background: var(--accent);
+}
+
+.btn-small {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+}
+
+.btn-roll {
+    border-color: var(--accent-strong);
+}
+
+.btn-remove:hover {
+    border-color: var(--red) !important;
+    color: var(--red);
+}
+
+.crit-field {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+.ac-field {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+.ac-field input {
+    width: 4rem;
+}
+
+/* ---------- preset bar ---------- */
+
+.preset-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.55rem 0.8rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.preset-label {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.preset-save {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.preset-name-input {
+    width: 11rem;
+}
+
+/* ---------- summary ---------- */
+
+.summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--accent-strong);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.summary strong {
+    color: var(--gold);
+    font-size: 1.05rem;
+}
+
+/* ---------- attack cards ---------- */
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.attack-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+}
+
+.attack-card.res-crit {
+    border-color: var(--crit);
+}
+
+.attack-card.res-fumble {
+    border-color: var(--red);
+}
+
+.card-config {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.row-num {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    min-width: 2rem;
+}
+
+input, select {
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.name-input {
+    width: 9.5rem;
+}
+
+.num {
+    width: 4rem;
+}
+
+.num.narrow {
+    width: 3.2rem;
+}
+
+.field {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* ---------- mode toggle ---------- */
+
+.mode-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mode-btn {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: none;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mode-btn + .mode-btn {
+    border-left: 1px solid var(--border);
+}
+
+.mode-btn.active {
+    color: #fff;
+}
+
+.mode-btn.active.normal {
+    background: var(--accent-strong);
+}
+
+.mode-btn.active.advantage {
+    background: #059669;
+}
+
+.mode-btn.active.disadvantage {
+    background: #dc2626;
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+/* ---------- results ---------- */
+
+.result-log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--border);
+}
+
+.card-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+.roll-idx {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    min-width: 1.4rem;
+    text-align: right;
+}
+
+.log-subtotal {
+    display: flex;
+    gap: 0.4rem;
+    padding-top: 0.45rem;
+    border-top: 1px dashed var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+.log-subtotal strong {
+    color: var(--gold);
+}
+
+.d20-group {
+    display: inline-flex;
+    gap: 0.35rem;
+}
+
+.die {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.1rem;
+    height: 2.1rem;
+    padding: 0 0.3rem;
+    border-radius: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.die.small {
+    min-width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+}
+
+.die.chosen {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.die.dropped {
+    opacity: 0.38;
+}
+
+.die.nat20 {
+    color: var(--crit);
+}
+
+.die.nat1 {
+    color: var(--red);
+}
+
+.attack-total strong {
+    font-size: 1.05rem;
+}
+
+.badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.badge.crit {
+    background: var(--crit);
+    color: #1a1200;
+}
+
+.badge.fumble {
+    background: var(--red);
+    color: #2a0505;
+}
+
+.badge.hit {
+    background: var(--green);
+    color: #032b1c;
+}
+
+.badge.miss {
+    background: var(--border);
+    color: var(--text-dim);
+}
+
+.damage {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.dmg-mod {
+    color: var(--text-dim);
+}
+
+.crit-bonus {
+    color: var(--crit);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.dmg-total {
+    color: var(--gold);
+    font-size: 1.05rem;
+}
+
+/* ---------- empty state ---------- */
+
+.empty-hint {
+    text-align: center;
+    color: var(--text-dim);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 2rem 1.5rem;
+    margin-top: 1rem;
+}
+
+/* ---------- blazor boot / error UI (template plumbing) ---------- */
+
+#blazor-error-ui {
+    background: #b91c1c;
+    color: #fff;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.3);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.loading-progress {
+    position: relative;
+    display: block;
+    width: 8rem;
+    height: 8rem;
+    margin: 20vh auto 1rem auto;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: #2a2340;
+    stroke-width: 0.6rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: var(--accent-strong);
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: bold;
+    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+    color: var(--text);
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading");
+}
