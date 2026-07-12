@@ -246,6 +246,38 @@ input:focus, select:focus {
     white-space: nowrap;
 }
 
+.dice-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.plus {
+    color: var(--text-dim);
+}
+
+.icon-btn {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.25rem 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.icon-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.icon-btn.add-die:hover {
+    border-color: var(--accent-strong);
+    color: var(--accent);
+}
+
 /* ---------- mode toggle ---------- */
 
 .mode-toggle {
@@ -417,6 +449,17 @@ input:focus, select:focus {
 
 .dmg-mod {
     color: var(--text-dim);
+}
+
+.dmg-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.die-label {
+    color: var(--text-dim);
+    font-size: 0.75rem;
 }
 
 .crit-bonus {

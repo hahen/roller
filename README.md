@@ -13,7 +13,7 @@ Then open http://localhost:5241.
 ## Features
 
 - **Attack rolls**: normal / advantage / disadvantage, with a to-hit modifier. Both d20s are shown for adv/dis; the kept die is highlighted.
-- **Damage**: N × (d4/d6/d8/d10/d12/d20/d100) + modifier.
+- **Damage**: any combination of dice groups + modifier, e.g. `1d6 + 2d8 + 4` — add or remove die types per attack with the `+d` button.
 - **Crits**: natural 20 crits, natural 1 auto-misses. Crit rule is selectable in the toolbar:
   - *Default (2× dice)* — RAW 5e: roll all damage dice twice, modifier added once.
   - *Perkins (max + roll)* — house rule: normal damage roll + maximized damage dice (e.g. 1d4+4 crit = 1d4 + 4 + 4).

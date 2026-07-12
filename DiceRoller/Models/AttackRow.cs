@@ -18,14 +18,27 @@ public enum CritRule
     Perkins,
 }
 
+/// <summary>One group of identical damage dice, e.g. 2d8.</summary>
+public class DamageDice
+{
+    public int Count { get; set; } = 1;
+    public int Size { get; set; } = 6;
+}
+
 public class AttackRow
 {
     public string Name { get; set; } = "Attack";
     public RollMode Mode { get; set; } = RollMode.Normal;
     public int AttackMod { get; set; }
-    public int DamageDiceCount { get; set; } = 1;
-    public int DamageDieSize { get; set; } = 6;
+
+    /// <summary>Damage dice groups, e.g. [1d6, 2d8]; always at least one.</summary>
+    public List<DamageDice> Damage { get; set; } = [new()];
+
     public int DamageMod { get; set; }
+
+    // Set-only: lets presets saved before multi-dice damage deserialize into the first group.
+    public int DamageDiceCount { set => Damage[0].Count = value; }
+    public int DamageDieSize { set => Damage[0].Size = value; }
 
     /// <summary>How many times this attack is rolled (e.g. 10 for Animate Objects).</summary>
     public int Count { get; set; } = 1;
@@ -42,10 +55,17 @@ public class AttackResult
     public int AttackTotal { get; set; }
     public bool IsCrit { get; set; }
     public bool IsFumble { get; set; }
-    public int[] DamageRolls { get; set; } = [];
+    public List<DamageGroupResult> DamageGroups { get; set; } = [];
 
     /// <summary>Flat bonus from the Perkins crit rule (maximized dice); 0 otherwise.</summary>
     public int CritBonus { get; set; }
 
     public int DamageTotal { get; set; }
+}
+
+/// <summary>Rolled values for one damage dice group.</summary>
+public class DamageGroupResult
+{
+    public int Size { get; set; }
+    public int[] Rolls { get; set; } = [];
 }

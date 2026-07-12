@@ -32,12 +32,16 @@ public class DiceService
 
         // Default (RAW): crit doubles the number of damage dice, modifier added once.
         // Perkins: crit adds the maximized damage dice on top of a normal roll instead.
-        int diceCount = isCrit && critRule == CritRule.Default
-            ? row.DamageDiceCount * 2
-            : row.DamageDiceCount;
-        int[] damageRolls = Roll(diceCount, row.DamageDieSize);
+        int diceMultiplier = isCrit && critRule == CritRule.Default ? 2 : 1;
+        var damageGroups = row.Damage
+            .Select(g => new DamageGroupResult
+            {
+                Size = g.Size,
+                Rolls = Roll(g.Count * diceMultiplier, g.Size),
+            })
+            .ToList();
         int critBonus = isCrit && critRule == CritRule.Perkins
-            ? row.DamageDiceCount * row.DamageDieSize
+            ? row.Damage.Sum(g => g.Count * g.Size)
             : 0;
 
         return new AttackResult
@@ -48,9 +52,9 @@ public class DiceService
             AttackTotal = natural + row.AttackMod,
             IsCrit = isCrit,
             IsFumble = isFumble,
-            DamageRolls = damageRolls,
+            DamageGroups = damageGroups,
             CritBonus = critBonus,
-            DamageTotal = damageRolls.Sum() + critBonus + row.DamageMod,
+            DamageTotal = damageGroups.Sum(g => g.Rolls.Sum()) + critBonus + row.DamageMod,
         };
     }
 }

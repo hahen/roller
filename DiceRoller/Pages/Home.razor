@@ -90,18 +90,34 @@
                     <input type="number" class="num" @bind="row.AttackMod" />
                 </label>
 
-                <label class="field dmg-field">
+                <div class="field dmg-field">
                     damage
-                    <input type="number" class="num narrow" min="1" @bind="row.DamageDiceCount" />
-                    <select @bind="row.DamageDieSize">
-                        @foreach (var d in _dieSizes)
+                    @for (int k = 0; k < row.Damage.Count; k++)
+                    {
+                        var group = row.Damage[k];
+                        var gi = k;
+                        @if (gi > 0)
                         {
-                            <option value="@d">d@(d)</option>
+                            <span class="plus">+</span>
                         }
-                    </select>
-                    <span>+</span>
+                        <span class="dice-group">
+                            <input type="number" class="num narrow" min="1" @bind="group.Count" />
+                            <select @bind="group.Size">
+                                @foreach (var d in _dieSizes)
+                                {
+                                    <option value="@d">d@(d)</option>
+                                }
+                            </select>
+                            @if (row.Damage.Count > 1)
+                            {
+                                <button class="icon-btn" @onclick="() => row.Damage.RemoveAt(gi)" title="Remove these dice">✕</button>
+                            }
+                        </span>
+                    }
+                    <button class="icon-btn add-die" @onclick="() => row.Damage.Add(new DamageDice())" title="Add another die type (e.g. 1d6 + 2d8)">+d</button>
+                    <span class="plus">+</span>
                     <input type="number" class="num" @bind="row.DamageMod" />
-                </label>
+                </div>
 
                 <label class="field" title="How many times to roll this attack">
                     ×
@@ -149,9 +165,18 @@
                             </span>
                             <span class="damage">
                                 dmg:
-                                @foreach (var d in res.DamageRolls)
+                                @foreach (var grp in res.DamageGroups)
                                 {
-                                    <span class="die small">@d</span>
+                                    <span class="dmg-group">
+                                        @if (res.DamageGroups.Count > 1)
+                                        {
+                                            <span class="die-label">d@(grp.Size)</span>
+                                        }
+                                        @foreach (var d in grp.Rolls)
+                                        {
+                                            <span class="die small" title="d@(grp.Size)">@d</span>
+                                        }
+                                    </span>
                                 }
                                 @if (res.CritBonus > 0)
                                 {
@@ -254,8 +279,7 @@
         {
             Name = "Tiny object",
             AttackMod = 8,
-            DamageDiceCount = 1,
-            DamageDieSize = 4,
+            Damage = [new DamageDice { Count = 1, Size = 4 }],
             DamageMod = 4,
             Count = 10,
         });
@@ -289,11 +313,18 @@
 
     private static void Sanitize(AttackRow row)
     {
-        row.DamageDiceCount = Math.Clamp(row.DamageDiceCount, 1, 40);
         row.Count = Math.Clamp(row.Count, 1, 50);
-        if (row.DamageDieSize is not (4 or 6 or 8 or 10 or 12 or 20 or 100))
+        if (row.Damage.Count == 0)
         {
-            row.DamageDieSize = 6;
+            row.Damage.Add(new DamageDice());
+        }
+        foreach (var group in row.Damage)
+        {
+            group.Count = Math.Clamp(group.Count, 1, 40);
+            if (group.Size is not (4 or 6 or 8 or 10 or 12 or 20 or 100))
+            {
+                group.Size = 6;
+            }
         }
     }
 
