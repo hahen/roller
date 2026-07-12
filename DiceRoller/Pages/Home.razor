@@ -72,61 +72,69 @@
         var idx = i;
         <div class="attack-card @ResultClass(row)">
             <div class="card-config">
-                <span class="row-num">#@(idx + 1)</span>
-                <input class="name-input" type="text" @bind="row.Name" />
+                <div class="config-line line-head">
+                    <span class="row-num">#@(idx + 1)</span>
+                    <input class="name-input" type="text" @bind="row.Name" />
 
-                <div class="mode-toggle">
-                    @foreach (var mode in Enum.GetValues<RollMode>())
-                    {
-                        <button class="mode-btn @(row.Mode == mode ? "active " + mode.ToString().ToLower() : "")"
-                                @onclick="() => row.Mode = mode">
-                            @ModeLabel(mode)
-                        </button>
-                    }
-                </div>
-
-                <label class="field">
-                    to hit
-                    <input type="number" class="num" @bind="row.AttackMod" />
-                </label>
-
-                <div class="field dmg-field">
-                    damage
-                    @for (int k = 0; k < row.Damage.Count; k++)
-                    {
-                        var group = row.Damage[k];
-                        var gi = k;
-                        @if (gi > 0)
+                    <div class="mode-toggle">
+                        @foreach (var mode in Enum.GetValues<RollMode>())
                         {
-                            <span class="plus">+</span>
+                            <button class="mode-btn @(row.Mode == mode ? "active " + mode.ToString().ToLower() : "")"
+                                    @onclick="() => row.Mode = mode">
+                                @ModeLabel(mode)
+                            </button>
                         }
-                        <span class="dice-group">
-                            <input type="number" class="num narrow" min="1" @bind="group.Count" />
-                            <select @bind="group.Size">
-                                @foreach (var d in _dieSizes)
-                                {
-                                    <option value="@d">d@(d)</option>
-                                }
-                            </select>
-                            @if (row.Damage.Count > 1)
-                            {
-                                <button class="icon-btn" @onclick="() => row.Damage.RemoveAt(gi)" title="Remove these dice">✕</button>
-                            }
-                        </span>
-                    }
-                    <button class="icon-btn add-die" @onclick="() => row.Damage.Add(new DamageDice())" title="Add another die type (e.g. 1d6 + 2d8)">+d</button>
-                    <span class="plus">+</span>
-                    <input type="number" class="num" @bind="row.DamageMod" />
+                    </div>
                 </div>
 
-                <label class="field" title="How many times to roll this attack">
-                    ×
-                    <input type="number" class="num narrow" min="1" max="50" @bind="row.Count" />
-                </label>
+                <div class="config-line line-nums">
+                    <label class="field">
+                        to hit
+                        <input type="number" class="num" @bind="row.AttackMod" />
+                    </label>
 
-                <div class="card-actions">
-                    <button class="btn btn-small btn-roll" @onclick="() => RollOne(row)">🎲 Roll @(row.Count > 1 ? $"×{row.Count}" : "")</button>
-                    <button class="btn btn-small btn-remove" @onclick="() => _rows.RemoveAt(idx)" title="Remove">✕</button>
+                    <label class="field" title="How many times to roll this attack">
+                        ×
+                        <input type="number" class="num narrow" min="1" max="50" @bind="row.Count" />
+                    </label>
+                </div>
+
+                <div class="config-line line-dmg">
+                    <div class="field dmg-field">
+                        damage
+                        @for (int k = 0; k < row.Damage.Count; k++)
+                        {
+                            var group = row.Damage[k];
+                            var gi = k;
+                            @if (gi > 0)
+                            {
+                                <span class="plus">+</span>
+                            }
+                            <span class="dice-group">
+                                <input type="number" class="num narrow" min="1" @bind="group.Count" />
+                                <select @bind="group.Size">
+                                    @foreach (var d in _dieSizes)
+                                    {
+                                        <option value="@d">d@(d)</option>
+                                    }
+                                </select>
+                                @if (row.Damage.Count > 1)
+                                {
+                                    <button class="icon-btn" @onclick="() => row.Damage.RemoveAt(gi)" title="Remove these dice">✕</button>
+                                }
+                            </span>
+                        }
+                        <button class="icon-btn add-die" @onclick="() => row.Damage.Add(new DamageDice())" title="Add another die type (e.g. 1d6 + 2d8)">+d</button>
+                        <span class="plus">+</span>
+                        <input type="number" class="num" @bind="row.DamageMod" />
+                    </div>
+                </div>
+
+                <div class="config-line line-actions">
+                    <div class="card-actions">
+                        <button class="btn btn-small btn-roll" @onclick="() => RollOne(row)">🎲 Roll @(row.Count > 1 ? $"×{row.Count}" : "")</button>
+                        <button class="btn btn-small btn-remove" @onclick="() => _rows.RemoveAt(idx)" title="Remove">✕</button>
+                    </div>
                 </div>
             </div>
 
