@@ -255,6 +255,10 @@ input:focus, select:focus {
     white-space: nowrap;
 }
 
+.dmg-field {
+    flex-wrap: wrap;
+}
+
 .dice-group {
     display: inline-flex;
     align-items: center;
@@ -491,6 +495,68 @@ input:focus, select:focus {
     border-radius: 10px;
     padding: 2rem 1.5rem;
     margin-top: 1rem;
+}
+
+/* ---------- touch devices (any width — phones AND tablets) ---------- */
+/* Galaxy Tab S8+ portrait is ~800px wide, so width queries alone would give it
+   mouse-sized controls; pointer:coarse targets touch hardware directly. */
+
+@media (pointer: coarse) {
+    input, select, .btn {
+        font-size: 1rem;
+        min-height: 2.6rem;
+    }
+
+    .icon-btn {
+        min-height: 2.2rem;
+        min-width: 2.2rem;
+        font-size: 0.9rem;
+    }
+
+    .mode-btn {
+        font-size: 0.9rem;
+        min-height: 2.6rem;
+    }
+
+    .die {
+        min-width: 2.3rem;
+        height: 2.3rem;
+    }
+
+    .die.small {
+        min-width: 1.9rem;
+        height: 1.9rem;
+    }
+}
+
+/* ---------- tablet portrait / phone landscape (641–1024px) ----------
+   Galaxy Tab S8+ portrait (~800px) and S24 Ultra landscape (~832px):
+   name + mode toggle get their own row, everything else flows below. */
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .line-head {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        width: 100%;
+    }
+
+    .name-input {
+        flex: 1;
+        max-width: 18rem;
+    }
+
+    .card-actions {
+        margin-left: auto;
+    }
+}
+
+/* Short landscape screens (phone on its side): a pinned summary wastes height. */
+@media (max-height: 500px) {
+    .summary {
+        position: static;
+        box-shadow: none;
+    }
 }
 
 /* ---------- mobile ---------- */
