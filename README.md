@@ -19,6 +19,7 @@ Then open http://localhost:5241.
   - *Perkins (max + roll)* — house rule: normal damage roll + maximized damage dice (e.g. 1d4+4 crit = 1d4 + 4 + 4).
 - **Multi-roll (×N)**: each attack has a × count — one card rolls N attacks at once and shows every roll in a log underneath, with a per-card subtotal. E.g. one tiny object (+8, 1d4+4) ×10 covers all of *Animate Objects*.
 - **Roll all**: rolls every card; an optional Target AC field shows HIT/MISS per roll plus a summary (hits count, total damage of hits).
+- **Simulations**: the 📊 Sim button on each attack runs 1,000 / 10,000 / 100,000 Monte Carlo turns (respecting mode, crit rule, × count and Target AC) and shows hit/crit/nat-1 rates, avg/min/max damage per turn and a damage histogram. Simulations use `Random.Shared` for speed; real rolls stay on the crypto RNG.
 - **Presets**: save the current set of attacks under a name and reload it any time (stored in the browser's localStorage, survives page reloads). Saving to an existing name overwrites it; Load replaces the current attacks.
 - One-click **Animate Objects preset** (tiny object ×10) on the empty start screen.
 

@@ -14,12 +14,20 @@
 <div class="toolbar">
     <button class="btn btn-add" @onclick="AddRow">+ Add attack</button>
     <button class="btn btn-roll-all" @onclick="RollAll" disabled="@(!_rows.Any())">🎲 Roll all (@TotalAttackCount)</button>
-    <button class="btn btn-clear" @onclick="ClearResults" disabled="@(!_rows.Any(r => r.Results.Count > 0))">Clear results</button>
+    <button class="btn btn-clear" @onclick="ClearResults" disabled="@(!_rows.Any(r => r.Results.Count > 0 || r.Sim != null))">Clear results</button>
     <label class="crit-field" title="Default: crit rolls all damage dice twice. Perkins: crit deals normal roll + maximized dice.">
         Crit rule
         <select @bind="_critRule">
             <option value="@CritRule.Default">Default (2× dice)</option>
             <option value="@CritRule.Perkins">Perkins (max + roll)</option>
+        </select>
+    </label>
+    <label class="ac-field sim-field" title="How many turns each 📊 Sim button simulates">
+        Sim runs
+        <select @bind="_simIterations">
+            <option value="1000">1,000</option>
+            <option value="10000">10,000</option>
+            <option value="100000">100,000</option>
         </select>
     </label>
     <label class="ac-field">
@@ -132,11 +140,53 @@
 
                 <div class="config-line line-actions">
                     <div class="card-actions">
+                        <button class="btn btn-small" @onclick="() => Simulate(row)"
+                                title="Simulate @_simIterations.ToString("N0") turns and show the stats">📊 Sim</button>
                         <button class="btn btn-small btn-roll" @onclick="() => RollOne(row)">🎲 Roll @(row.Count > 1 ? $"×{row.Count}" : "")</button>
                         <button class="btn btn-small btn-remove" @onclick="() => _rows.RemoveAt(idx)" title="Remove">✕</button>
                     </div>
                 </div>
             </div>
+
+            @if (row.Sim is SimulationResult sim)
+            {
+                <div class="sim-panel">
+                    <div class="sim-head">
+                        <span>
+                            📊 @sim.Iterations.ToString("N0") simulated turns
+                            (@row.Count attack@(row.Count > 1 ? "s" : "") each@(sim.TargetAc is int simAc ? $" vs AC {simAc}" : ""))
+                        </span>
+                        <button class="icon-btn" @onclick="() => row.Sim = null" title="Close simulation">✕</button>
+                    </div>
+                    <div class="sim-stats">
+                        @if (sim.TargetAc != null)
+                        {
+                            <span>hit <strong>@Pct(sim.HitRate)</strong></span>
+                        }
+                        <span>crit <strong>@Pct(sim.CritRate)</strong></span>
+                        <span>nat 1 <strong>@Pct(sim.FumbleRate)</strong></span>
+                        <span>damage/turn: avg <strong class="dmg-total">@sim.AvgDamage.ToString("0.#")</strong></span>
+                        <span>min <strong>@sim.MinDamage</strong></span>
+                        <span>max <strong>@sim.MaxDamage</strong></span>
+                    </div>
+                    <div class="histogram">
+                        @for (int b = 0; b < sim.Buckets.Length; b++)
+                        {
+                            int from = sim.MinDamage + b * sim.BucketSize;
+                            int to = Math.Min(from + sim.BucketSize - 1, sim.MaxDamage);
+                            double pct = 100.0 * sim.Buckets[b] / sim.MaxBucketCount;
+                            string label = sim.BucketSize == 1 ? $"{from}" : $"{from}–{to}";
+                            <div class="hist-bar" style="height:@(pct.ToString("0.#"))%"
+                                 title="@label dmg: @sim.Buckets[b].ToString("N0")× (@Pct((double)sim.Buckets[b] / sim.Iterations))"></div>
+                        }
+                    </div>
+                    <div class="hist-axis">
+                        <span>@sim.MinDamage</span>
+                        <span>damage per turn</span>
+                        <span>@sim.MaxDamage</span>
+                    </div>
+                </div>
+            }
 
             @if (row.Results.Count > 0)
             {
@@ -231,6 +281,7 @@
     private readonly int[] _dieSizes = [4, 6, 8, 10, 12, 20, 100];
     private int? _targetAc;
     private CritRule _critRule = CritRule.Default;
+    private int _simIterations = 1000;
     private Dictionary<string, List<AttackRow>> _presets = [];
     private string _selectedPreset = "";
     private string _newPresetName = "";
@@ -311,11 +362,18 @@
         }
     }
 
+    private void Simulate(AttackRow row)
+    {
+        Sanitize(row);
+        row.Sim = Dice.Simulate(row, _critRule, _targetAc, _simIterations);
+    }
+
     private void ClearResults()
     {
         foreach (var row in _rows)
         {
             row.Results.Clear();
+            row.Sim = null;
         }
     }
 
@@ -335,6 +393,8 @@
             }
         }
     }
+
+    private static string Pct(double value) => (value * 100).ToString("0.#") + "%";
 
     private static string ModeLabel(RollMode mode) => mode switch
     {

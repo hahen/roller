@@ -15,6 +15,92 @@ public class DiceService
     public int[] Roll(int count, int sides) =>
         Enumerable.Range(0, count).Select(_ => Roll(sides)).ToArray();
 
+    /// <summary>
+    /// Monte Carlo simulation of many turns of one attack row. Uses Random.Shared
+    /// (xoshiro) rather than the crypto RNG: for aggregate statistics the speed matters
+    /// and its distribution quality is more than sufficient; real rolls stay crypto.
+    /// </summary>
+    public SimulationResult Simulate(AttackRow row, CritRule critRule, int? targetAc, int iterations)
+    {
+        var rng = Random.Shared;
+        int attacksPerTurn = Math.Clamp(row.Count, 1, 50);
+        var totals = new int[iterations];
+        long hits = 0, crits = 0, fumbles = 0;
+
+        for (int i = 0; i < iterations; i++)
+        {
+            int total = 0;
+            for (int a = 0; a < attacksPerTurn; a++)
+            {
+                int first = rng.Next(1, 21);
+                int natural = row.Mode switch
+                {
+                    RollMode.Advantage => Math.Max(first, rng.Next(1, 21)),
+                    RollMode.Disadvantage => Math.Min(first, rng.Next(1, 21)),
+                    _ => first,
+                };
+                bool isCrit = natural == 20;
+                bool isFumble = natural == 1;
+                if (isCrit) crits++;
+                if (isFumble) fumbles++;
+
+                bool lands = isCrit
+                    || (!isFumble && (targetAc is not int ac || natural + row.AttackMod >= ac));
+                if (lands)
+                {
+                    hits++;
+                    total += RollDamageFast(rng, row, isCrit, critRule);
+                }
+            }
+            totals[i] = total;
+        }
+
+        double attackCount = (double)iterations * attacksPerTurn;
+        int min = totals.Min();
+        int max = totals.Max();
+        int range = max - min + 1;
+        int bucketSize = Math.Max(1, (int)Math.Ceiling(range / 24.0));
+        var buckets = new int[(range + bucketSize - 1) / bucketSize];
+        foreach (int t in totals)
+        {
+            buckets[(t - min) / bucketSize]++;
+        }
+
+        return new SimulationResult
+        {
+            Iterations = iterations,
+            TargetAc = targetAc,
+            HitRate = hits / attackCount,
+            CritRate = crits / attackCount,
+            FumbleRate = fumbles / attackCount,
+            AvgDamage = totals.Average(),
+            MinDamage = min,
+            MaxDamage = max,
+            Buckets = buckets,
+            BucketSize = bucketSize,
+            MaxBucketCount = buckets.Max(),
+        };
+    }
+
+    private static int RollDamageFast(Random rng, AttackRow row, bool isCrit, CritRule critRule)
+    {
+        int multiplier = isCrit && critRule == CritRule.Default ? 2 : 1;
+        int sum = row.DamageMod;
+        foreach (var group in row.Damage)
+        {
+            int dice = group.Count * multiplier;
+            for (int d = 0; d < dice; d++)
+            {
+                sum += rng.Next(1, group.Size + 1);
+            }
+        }
+        if (isCrit && critRule == CritRule.Perkins)
+        {
+            sum += row.Damage.Sum(g => g.Count * g.Size);
+        }
+        return sum;
+    }
+
     public AttackResult ResolveAttack(AttackRow row, CritRule critRule = CritRule.Default)
     {
         int first = Roll(20);

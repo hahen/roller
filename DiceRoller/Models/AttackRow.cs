@@ -45,6 +45,31 @@ public class AttackRow
 
     [JsonIgnore]
     public List<AttackResult> Results { get; } = [];
+
+    [JsonIgnore]
+    public SimulationResult? Sim { get; set; }
+}
+
+/// <summary>Aggregate stats from simulating many turns of one attack row.</summary>
+public class SimulationResult
+{
+    public int Iterations { get; set; }
+    public int? TargetAc { get; set; }
+    public double HitRate { get; set; }
+    public double CritRate { get; set; }
+    public double FumbleRate { get; set; }
+
+    /// <summary>Damage per turn = all attacks of the row (its × count) in one iteration.</summary>
+    public double AvgDamage { get; set; }
+
+    public int MinDamage { get; set; }
+    public int MaxDamage { get; set; }
+
+    /// <summary>Damage histogram: Buckets[i] counts totals in [MinDamage + i*BucketSize, +BucketSize).</summary>
+    public int[] Buckets { get; set; } = [];
+
+    public int BucketSize { get; set; } = 1;
+    public int MaxBucketCount { get; set; }
 }
 
 public class AttackResult
