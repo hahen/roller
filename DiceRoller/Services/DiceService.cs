@@ -16,40 +16,45 @@ public class DiceService
         Enumerable.Range(0, count).Select(_ => Roll(sides)).ToArray();
 
     /// <summary>
-    /// Monte Carlo simulation of many turns of one attack row. Uses Random.Shared
-    /// (xoshiro) rather than the crypto RNG: for aggregate statistics the speed matters
-    /// and its distribution quality is more than sufficient; real rolls stay crypto.
+    /// Monte Carlo simulation of many turns of a set of attacks (each rolled its × count
+    /// per turn). Uses Random.Shared (xoshiro) rather than the crypto RNG: for aggregate
+    /// statistics the speed matters and its distribution quality is more than sufficient;
+    /// real rolls stay crypto.
     /// </summary>
-    public SimulationResult Simulate(AttackRow row, CritRule critRule, int? targetAc, int iterations)
+    public SimulationResult Simulate(IReadOnlyList<AttackRow> attacks, CritRule critRule, int? targetAc, int iterations)
     {
         var rng = Random.Shared;
-        int attacksPerTurn = Math.Clamp(row.Count, 1, 50);
         var totals = new int[iterations];
         long hits = 0, crits = 0, fumbles = 0;
+        int attacksPerTurn = attacks.Sum(r => Math.Clamp(r.Count, 1, 50));
 
         for (int i = 0; i < iterations; i++)
         {
             int total = 0;
-            for (int a = 0; a < attacksPerTurn; a++)
+            foreach (var row in attacks)
             {
-                int first = rng.Next(1, 21);
-                int natural = row.Mode switch
+                int count = Math.Clamp(row.Count, 1, 50);
+                for (int a = 0; a < count; a++)
                 {
-                    RollMode.Advantage => Math.Max(first, rng.Next(1, 21)),
-                    RollMode.Disadvantage => Math.Min(first, rng.Next(1, 21)),
-                    _ => first,
-                };
-                bool isCrit = natural == 20;
-                bool isFumble = natural == 1;
-                if (isCrit) crits++;
-                if (isFumble) fumbles++;
+                    int first = rng.Next(1, 21);
+                    int natural = row.Mode switch
+                    {
+                        RollMode.Advantage => Math.Max(first, rng.Next(1, 21)),
+                        RollMode.Disadvantage => Math.Min(first, rng.Next(1, 21)),
+                        _ => first,
+                    };
+                    bool isCrit = natural == 20;
+                    bool isFumble = natural == 1;
+                    if (isCrit) crits++;
+                    if (isFumble) fumbles++;
 
-                bool lands = isCrit
-                    || (!isFumble && (targetAc is not int ac || natural + row.AttackMod >= ac));
-                if (lands)
-                {
-                    hits++;
-                    total += RollDamageFast(rng, row, isCrit, critRule);
+                    bool lands = isCrit
+                        || (!isFumble && (targetAc is not int ac || natural + row.AttackMod >= ac));
+                    if (lands)
+                    {
+                        hits++;
+                        total += RollDamageFast(rng, row, isCrit, critRule);
+                    }
                 }
             }
             totals[i] = total;

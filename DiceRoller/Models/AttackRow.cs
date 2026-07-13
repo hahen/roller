@@ -45,6 +45,13 @@ public class AttackRow
 
     [JsonIgnore]
     public List<AttackResult> Results { get; } = [];
+}
+
+/// <summary>A named set of attacks rolled together, e.g. a creature's multiattack.</summary>
+public class AttackGroup
+{
+    public string Name { get; set; } = "Group";
+    public List<AttackRow> Attacks { get; set; } = [new()];
 
     [JsonIgnore]
     public SimulationResult? Sim { get; set; }

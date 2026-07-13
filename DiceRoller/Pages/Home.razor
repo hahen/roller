@@ -12,9 +12,9 @@
 </header>
 
 <div class="toolbar">
-    <button class="btn btn-add" @onclick="AddRow">+ Add attack</button>
-    <button class="btn btn-roll-all" @onclick="RollAll" disabled="@(!_rows.Any())">🎲 Roll all (@TotalAttackCount)</button>
-    <button class="btn btn-clear" @onclick="ClearResults" disabled="@(!_rows.Any(r => r.Results.Count > 0 || r.Sim != null))">Clear results</button>
+    <button class="btn btn-add" @onclick="AddGroup">+ Add group</button>
+    <button class="btn btn-roll-all" @onclick="RollAll" disabled="@(!_groups.Any())">🎲 Roll all (@TotalAttackCount)</button>
+    <button class="btn btn-clear" @onclick="ClearResults" disabled="@(!HasAnyResults)">Clear results</button>
     <label class="crit-field" title="Default: crit rolls all damage dice twice. Perkins: crit deals normal roll + maximized dice.">
         Crit rule
         <select @bind="_critRule">
@@ -50,14 +50,14 @@
     <span class="preset-save">
         <input type="text" class="preset-name-input" placeholder="preset name…" @bind="_newPresetName" />
         <button class="btn btn-small" @onclick="SavePreset"
-                disabled="@(!_rows.Any() || string.IsNullOrWhiteSpace(_newPresetName))"
-                title="Save all current attacks under this name (overwrites an existing preset with the same name)">
+                disabled="@(!_groups.Any() || string.IsNullOrWhiteSpace(_newPresetName))"
+                title="Save all current groups under this name (overwrites an existing preset with the same name)">
             💾 Save current
         </button>
     </span>
 </div>
 
-@if (_rows.Any(r => r.Results.Count > 0))
+@if (HasAnyResults)
 {
     <div class="summary">
         @if (_targetAc is int ac)
@@ -73,90 +73,33 @@
     </div>
 }
 
-<div class="rows">
-    @for (int i = 0; i < _rows.Count; i++)
+<div class="groups">
+    @for (int g = 0; g < _groups.Count; g++)
     {
-        var row = _rows[i];
-        var idx = i;
-        <div class="attack-card @ResultClass(row)">
-            <div class="card-config">
-                <div class="config-line line-head">
-                    <span class="row-num">#@(idx + 1)</span>
-                    <input class="name-input" type="text" @bind="row.Name" />
-
-                    <div class="mode-toggle">
-                        @foreach (var mode in Enum.GetValues<RollMode>())
-                        {
-                            <button class="mode-btn @(row.Mode == mode ? "active " + mode.ToString().ToLower() : "")"
-                                    @onclick="() => row.Mode = mode">
-                                @ModeLabel(mode)
-                            </button>
-                        }
-                    </div>
-                </div>
-
-                <div class="config-line line-nums">
-                    <label class="field">
-                        to hit
-                        <input type="number" class="num" @bind="row.AttackMod" />
-                    </label>
-
-                    <label class="field" title="How many times to roll this attack">
-                        ×
-                        <input type="number" class="num narrow" min="1" max="50" @bind="row.Count" />
-                    </label>
-                </div>
-
-                <div class="config-line line-dmg">
-                    <div class="field dmg-field">
-                        damage
-                        @for (int k = 0; k < row.Damage.Count; k++)
-                        {
-                            var group = row.Damage[k];
-                            var gi = k;
-                            @if (gi > 0)
-                            {
-                                <span class="plus">+</span>
-                            }
-                            <span class="dice-group">
-                                <input type="number" class="num narrow" min="1" @bind="group.Count" />
-                                <select @bind="group.Size">
-                                    @foreach (var d in _dieSizes)
-                                    {
-                                        <option value="@d">d@(d)</option>
-                                    }
-                                </select>
-                                @if (row.Damage.Count > 1)
-                                {
-                                    <button class="icon-btn" @onclick="() => row.Damage.RemoveAt(gi)" title="Remove these dice">✕</button>
-                                }
-                            </span>
-                        }
-                        <button class="icon-btn add-die" @onclick="() => row.Damage.Add(new DamageDice())" title="Add another die type (e.g. 1d6 + 2d8)">+d</button>
-                        <span class="plus">+</span>
-                        <input type="number" class="num" @bind="row.DamageMod" />
-                    </div>
-                </div>
-
-                <div class="config-line line-actions">
-                    <div class="card-actions">
-                        <button class="btn btn-small" @onclick="() => Simulate(row)"
-                                title="Simulate @_simIterations.ToString("N0") turns and show the stats">📊 Sim</button>
-                        <button class="btn btn-small btn-roll" @onclick="() => RollOne(row)">🎲 Roll @(row.Count > 1 ? $"×{row.Count}" : "")</button>
-                        <button class="btn btn-small btn-remove" @onclick="() => _rows.RemoveAt(idx)" title="Remove">✕</button>
-                    </div>
+        var group = _groups[g];
+        var groupIdx = g;
+        <div class="group-card">
+            <div class="group-head">
+                <span class="row-num">#@(groupIdx + 1)</span>
+                <input class="name-input group-name" type="text" @bind="group.Name" />
+                <div class="group-actions">
+                    <button class="btn btn-small" @onclick="() => AddAttack(group)" title="Add an attack to this group">+ attack</button>
+                    <button class="btn btn-small" @onclick="() => Simulate(group)"
+                            title="Simulate @_simIterations.ToString("N0") turns of the whole group">📊 Sim</button>
+                    <button class="btn btn-small btn-roll" @onclick="() => RollGroup(group)">🎲 Roll group (@GroupAttackCount(group))</button>
+                    <button class="btn btn-small btn-remove" @onclick="() => _groups.RemoveAt(groupIdx)" title="Remove group">✕</button>
                 </div>
             </div>
 
-            @if (row.Sim is SimulationResult sim)
+            @if (group.Sim is SimulationResult sim)
             {
                 <div class="sim-panel">
                     <div class="sim-head">
                         <span>
                             📊 @sim.Iterations.ToString("N0") simulated turns
-                            (@row.Count attack@(row.Count > 1 ? "s" : "") each@(sim.TargetAc is int simAc ? $" vs AC {simAc}" : ""))
+                            (@GroupAttackCount(group) attack@(GroupAttackCount(group) > 1 ? "s" : "") each@(sim.TargetAc is int simAc ? $" vs AC {simAc}" : ""))
                         </span>
-                        <button class="icon-btn" @onclick="() => row.Sim = null" title="Close simulation">✕</button>
+                        <button class="icon-btn" @onclick="() => group.Sim = null" title="Close simulation">✕</button>
                     </div>
                     <div class="sim-stats">
                         @if (sim.TargetAc != null)
@@ -188,79 +131,172 @@
                 </div>
             }
 
-            @if (row.Results.Count > 0)
+            <div class="group-attacks">
+                @for (int i = 0; i < group.Attacks.Count; i++)
+                {
+                    var row = group.Attacks[i];
+                    var idx = i;
+                    <div class="attack-card @ResultClass(row)">
+                        <div class="card-config">
+                            <div class="config-line line-head">
+                                <input class="name-input" type="text" @bind="row.Name" />
+
+                                <div class="mode-toggle">
+                                    @foreach (var mode in Enum.GetValues<RollMode>())
+                                    {
+                                        <button class="mode-btn @(row.Mode == mode ? "active " + mode.ToString().ToLower() : "")"
+                                                @onclick="() => row.Mode = mode">
+                                            @ModeLabel(mode)
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="config-line line-nums">
+                                <label class="field">
+                                    to hit
+                                    <input type="number" class="num" @bind="row.AttackMod" />
+                                </label>
+
+                                <label class="field" title="How many times to roll this attack">
+                                    ×
+                                    <input type="number" class="num narrow" min="1" max="50" @bind="row.Count" />
+                                </label>
+                            </div>
+
+                            <div class="config-line line-dmg">
+                                <div class="field dmg-field">
+                                    damage
+                                    @for (int k = 0; k < row.Damage.Count; k++)
+                                    {
+                                        var dmgGroup = row.Damage[k];
+                                        var gi = k;
+                                        @if (gi > 0)
+                                        {
+                                            <span class="plus">+</span>
+                                        }
+                                        <span class="dice-group">
+                                            <input type="number" class="num narrow" min="1" @bind="dmgGroup.Count" />
+                                            <select @bind="dmgGroup.Size">
+                                                @foreach (var d in _dieSizes)
+                                                {
+                                                    <option value="@d">d@(d)</option>
+                                                }
+                                            </select>
+                                            @if (row.Damage.Count > 1)
+                                            {
+                                                <button class="icon-btn" @onclick="() => row.Damage.RemoveAt(gi)" title="Remove these dice">✕</button>
+                                            }
+                                        </span>
+                                    }
+                                    <button class="icon-btn add-die" @onclick="() => row.Damage.Add(new DamageDice())" title="Add another die type (e.g. 1d6 + 2d8)">+d</button>
+                                    <span class="plus">+</span>
+                                    <input type="number" class="num" @bind="row.DamageMod" />
+                                </div>
+                            </div>
+
+                            <div class="config-line line-actions">
+                                <div class="card-actions">
+                                    <button class="btn btn-small btn-roll" @onclick="() => RollOne(row)">🎲 Roll @(row.Count > 1 ? $"×{row.Count}" : "")</button>
+                                    <button class="btn btn-small btn-remove" @onclick="() => group.Attacks.RemoveAt(idx)"
+                                            disabled="@(group.Attacks.Count == 1)"
+                                            title="@(group.Attacks.Count == 1 ? "A group needs at least one attack" : "Remove attack")">✕</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (row.Results.Count > 0)
+                        {
+                            <div class="result-log">
+                                @for (int j = 0; j < row.Results.Count; j++)
+                                {
+                                    var res = row.Results[j];
+                                    <div class="card-result" @key="res">
+                                        @if (row.Results.Count > 1)
+                                        {
+                                            <span class="roll-idx">@(j + 1).</span>
+                                        }
+                                        <span class="d20-group">
+                                            <span class="die d20 @D20Class(row, res, res.D20First, isFirst: true)">@res.D20First</span>
+                                            @if (res.D20Second is int d2)
+                                            {
+                                                <span class="die d20 @D20Class(row, res, d2, isFirst: false)">@d2</span>
+                                            }
+                                        </span>
+                                        <span class="attack-total">
+                                            to hit: <strong>@res.AttackTotal</strong>
+                                            @if (res.IsCrit)
+                                            {
+                                                <span class="badge crit">CRIT!</span>
+                                            }
+                                            else if (res.IsFumble)
+                                            {
+                                                <span class="badge fumble">NAT 1</span>
+                                            }
+                                            else if (_targetAc is int ac2)
+                                            {
+                                                <span class="badge @(res.AttackTotal >= ac2 ? "hit" : "miss")">@(res.AttackTotal >= ac2 ? "HIT" : "MISS")</span>
+                                            }
+                                        </span>
+                                        <span class="damage">
+                                            dmg:
+                                            @foreach (var grp in res.DamageGroups)
+                                            {
+                                                <span class="dmg-group">
+                                                    @if (res.DamageGroups.Count > 1)
+                                                    {
+                                                        <span class="die-label">d@(grp.Size)</span>
+                                                    }
+                                                    @foreach (var d in grp.Rolls)
+                                                    {
+                                                        <span class="die small" title="d@(grp.Size)">@d</span>
+                                                    }
+                                                </span>
+                                            }
+                                            @if (res.CritBonus > 0)
+                                            {
+                                                <span class="crit-bonus" title="Perkins crit: maximized damage dice">+@res.CritBonus max</span>
+                                            }
+                                            @if (row.DamageMod != 0)
+                                            {
+                                                <span class="dmg-mod">@(row.DamageMod > 0 ? "+" : "")@row.DamageMod</span>
+                                            }
+                                            = <strong class="dmg-total">@res.DamageTotal</strong>
+                                        </span>
+                                    </div>
+                                }
+                                @if (row.Results.Count > 1)
+                                {
+                                    <div class="log-subtotal">
+                                        @if (_targetAc is int ac3)
+                                        {
+                                            <span>@row.Results.Count(r => Hits(r, ac3)) of @row.Results.Count hit</span>
+                                            <span>· damage (hits): <strong>@row.Results.Where(r => Hits(r, ac3)).Sum(r => r.DamageTotal)</strong></span>
+                                        }
+                                        else
+                                        {
+                                            <span>damage (all): <strong>@row.Results.Where(r => !r.IsFumble).Sum(r => r.DamageTotal)</strong></span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (group.Attacks.Count > 1 && group.Attacks.Any(a => a.Results.Count > 0))
             {
-                <div class="result-log">
-                    @for (int j = 0; j < row.Results.Count; j++)
+                <div class="group-subtotal">
+                    @{ var groupResults = group.Attacks.SelectMany(a => a.Results).ToList(); }
+                    @if (_targetAc is int ac4)
                     {
-                        var res = row.Results[j];
-                        <div class="card-result" @key="res">
-                            @if (row.Results.Count > 1)
-                            {
-                                <span class="roll-idx">@(j + 1).</span>
-                            }
-                            <span class="d20-group">
-                                <span class="die d20 @D20Class(row, res, res.D20First, isFirst: true)">@res.D20First</span>
-                                @if (res.D20Second is int d2)
-                                {
-                                    <span class="die d20 @D20Class(row, res, d2, isFirst: false)">@d2</span>
-                                }
-                            </span>
-                            <span class="attack-total">
-                                to hit: <strong>@res.AttackTotal</strong>
-                                @if (res.IsCrit)
-                                {
-                                    <span class="badge crit">CRIT!</span>
-                                }
-                                else if (res.IsFumble)
-                                {
-                                    <span class="badge fumble">NAT 1</span>
-                                }
-                                else if (_targetAc is int ac2)
-                                {
-                                    <span class="badge @(res.AttackTotal >= ac2 ? "hit" : "miss")">@(res.AttackTotal >= ac2 ? "HIT" : "MISS")</span>
-                                }
-                            </span>
-                            <span class="damage">
-                                dmg:
-                                @foreach (var grp in res.DamageGroups)
-                                {
-                                    <span class="dmg-group">
-                                        @if (res.DamageGroups.Count > 1)
-                                        {
-                                            <span class="die-label">d@(grp.Size)</span>
-                                        }
-                                        @foreach (var d in grp.Rolls)
-                                        {
-                                            <span class="die small" title="d@(grp.Size)">@d</span>
-                                        }
-                                    </span>
-                                }
-                                @if (res.CritBonus > 0)
-                                {
-                                    <span class="crit-bonus" title="Perkins crit: maximized damage dice">+@res.CritBonus max</span>
-                                }
-                                @if (row.DamageMod != 0)
-                                {
-                                    <span class="dmg-mod">@(row.DamageMod > 0 ? "+" : "")@row.DamageMod</span>
-                                }
-                                = <strong class="dmg-total">@res.DamageTotal</strong>
-                            </span>
-                        </div>
+                        <span>group: @groupResults.Count(r => Hits(r, ac4)) of @groupResults.Count hit</span>
+                        <span>· damage (hits): <strong>@groupResults.Where(r => Hits(r, ac4)).Sum(r => r.DamageTotal)</strong></span>
                     }
-                    @if (row.Results.Count > 1)
+                    else
                     {
-                        <div class="log-subtotal">
-                            @if (_targetAc is int ac3)
-                            {
-                                <span>@row.Results.Count(r => Hits(r, ac3)) of @row.Results.Count hit</span>
-                                <span>· damage (hits): <strong>@row.Results.Where(r => Hits(r, ac3)).Sum(r => r.DamageTotal)</strong></span>
-                            }
-                            else
-                            {
-                                <span>damage (all): <strong>@row.Results.Where(r => !r.IsFumble).Sum(r => r.DamageTotal)</strong></span>
-                            }
-                        </div>
+                        <span>group damage (all): <strong>@groupResults.Where(r => !r.IsFumble).Sum(r => r.DamageTotal)</strong></span>
                     }
                 </div>
             }
@@ -268,34 +304,73 @@
     }
 </div>
 
-@if (!_rows.Any())
+@if (!_groups.Any())
 {
     <div class="empty-hint">
-        <p>No attacks yet. Add one and set the × count to roll it many times — e.g. for <em>Animate Objects</em>: tiny object, +8 to hit, 1d4+4 damage, ×10.</p>
+        <p>No attacks yet. Add a group, put one or more attacks in it (a multiattack, a summon swarm…), set × counts, roll or simulate.</p>
         <button class="btn btn-add" @onclick="AddAnimateObjectsPreset">Load Animate Objects preset (tiny ×10)</button>
     </div>
 }
 
 @code {
-    private readonly List<AttackRow> _rows = [];
+    private readonly List<AttackGroup> _groups = [];
     private readonly int[] _dieSizes = [4, 6, 8, 10, 12, 20, 100];
     private int? _targetAc;
     private CritRule _critRule = CritRule.Default;
     private int _simIterations = 1000;
-    private Dictionary<string, List<AttackRow>> _presets = [];
+    private Dictionary<string, List<AttackGroup>> _presets = [];
     private string _selectedPreset = "";
     private string _newPresetName = "";
 
+    private IEnumerable<AttackRow> AllRows => _groups.SelectMany(g => g.Attacks);
+    private IEnumerable<AttackResult> AllResults => AllRows.SelectMany(r => r.Results);
+    private bool HasAnyResults => AllRows.Any(r => r.Results.Count > 0) || _groups.Any(g => g.Sim != null);
+    private int TotalAttackCount => _groups.Sum(GroupAttackCount);
+    private int RolledCount => AllResults.Count();
+    private int TotalDamage => AllResults.Where(r => !r.IsFumble).Sum(r => r.DamageTotal);
+    private int HitCount => _targetAc is int ac ? AllResults.Count(r => Hits(r, ac)) : 0;
+    private int TotalHitDamage => _targetAc is int ac
+        ? AllResults.Where(r => Hits(r, ac)).Sum(r => r.DamageTotal)
+        : 0;
+
+    private static int GroupAttackCount(AttackGroup group) =>
+        group.Attacks.Sum(a => Math.Clamp(a.Count, 1, 50));
+
+    private static bool Hits(AttackResult res, int ac) => res.IsCrit || (!res.IsFumble && res.AttackTotal >= ac);
+
     protected override async Task OnInitializedAsync() => _presets = await Presets.LoadAllAsync();
+
+    private void AddGroup() => _groups.Add(new AttackGroup { Name = $"Group {_groups.Count + 1}" });
+
+    private void AddAttack(AttackGroup group) => group.Attacks.Add(new AttackRow());
+
+    private void AddAnimateObjectsPreset()
+    {
+        _groups.Add(new AttackGroup
+        {
+            Name = "Animate Objects",
+            Attacks =
+            [
+                new AttackRow
+                {
+                    Name = "Tiny object",
+                    AttackMod = 8,
+                    Damage = [new DamageDice { Count = 1, Size = 4 }],
+                    DamageMod = 4,
+                    Count = 10,
+                },
+            ],
+        });
+    }
 
     private async Task SavePreset()
     {
         var name = _newPresetName.Trim();
-        if (name.Length == 0 || !_rows.Any())
+        if (name.Length == 0 || !_groups.Any())
         {
             return;
         }
-        _presets[name] = PresetService.DeepCopy(_rows);
+        _presets[name] = PresetService.DeepCopy(_groups);
         await Presets.SaveAllAsync(_presets);
         _selectedPreset = name;
         _newPresetName = "";
@@ -303,10 +378,10 @@
 
     private void LoadPreset()
     {
-        if (_presets.TryGetValue(_selectedPreset, out var rows))
+        if (_presets.TryGetValue(_selectedPreset, out var groups))
         {
-            _rows.Clear();
-            _rows.AddRange(PresetService.DeepCopy(rows));
+            _groups.Clear();
+            _groups.AddRange(PresetService.DeepCopy(groups));
         }
     }
 
@@ -319,31 +394,6 @@
         }
     }
 
-    private IEnumerable<AttackResult> AllResults => _rows.SelectMany(r => r.Results);
-    private int TotalAttackCount => _rows.Sum(r => Math.Clamp(r.Count, 1, 50));
-    private int RolledCount => AllResults.Count();
-    private int TotalDamage => AllResults.Where(r => !r.IsFumble).Sum(r => r.DamageTotal);
-    private int HitCount => _targetAc is int ac ? AllResults.Count(r => Hits(r, ac)) : 0;
-    private int TotalHitDamage => _targetAc is int ac
-        ? AllResults.Where(r => Hits(r, ac)).Sum(r => r.DamageTotal)
-        : 0;
-
-    private static bool Hits(AttackResult res, int ac) => res.IsCrit || (!res.IsFumble && res.AttackTotal >= ac);
-
-    private void AddRow() => _rows.Add(new AttackRow());
-
-    private void AddAnimateObjectsPreset()
-    {
-        _rows.Add(new AttackRow
-        {
-            Name = "Tiny object",
-            AttackMod = 8,
-            Damage = [new DamageDice { Count = 1, Size = 4 }],
-            DamageMod = 4,
-            Count = 10,
-        });
-    }
-
     private void RollOne(AttackRow row)
     {
         Sanitize(row);
@@ -354,26 +404,40 @@
         }
     }
 
-    private void RollAll()
+    private void RollGroup(AttackGroup group)
     {
-        foreach (var row in _rows)
+        foreach (var row in group.Attacks)
         {
             RollOne(row);
         }
     }
 
-    private void Simulate(AttackRow row)
+    private void RollAll()
     {
-        Sanitize(row);
-        row.Sim = Dice.Simulate(row, _critRule, _targetAc, _simIterations);
+        foreach (var group in _groups)
+        {
+            RollGroup(group);
+        }
+    }
+
+    private void Simulate(AttackGroup group)
+    {
+        foreach (var row in group.Attacks)
+        {
+            Sanitize(row);
+        }
+        group.Sim = Dice.Simulate(group.Attacks, _critRule, _targetAc, _simIterations);
     }
 
     private void ClearResults()
     {
-        foreach (var row in _rows)
+        foreach (var group in _groups)
         {
-            row.Results.Clear();
-            row.Sim = null;
+            group.Sim = null;
+            foreach (var row in group.Attacks)
+            {
+                row.Results.Clear();
+            }
         }
     }
 
